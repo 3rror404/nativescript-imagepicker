@@ -2,6 +2,18 @@ import * as application from "tns-core-modules/application";
 import * as imageAssetModule from "tns-core-modules/image-asset";
 import * as permissions from "nativescript-permissions";
 
+class SelectedAsset extends imageAssetModule.ImageAsset {
+    private _mediaType: string;
+
+    get mediaType(): string {
+        return this._mediaType;
+    }
+    protected setMediaType(value: string): void {
+        this._mediaType = value;
+        this.notifyPropertyChange("mediaType", value);
+    }
+}
+
 class UriHelper {
     public static _calculateFileUri(uri: android.net.Uri) {
         let DocumentsContract = (<any>android.provider).DocumentsContract;
@@ -121,6 +133,10 @@ export class ImagePicker {
         return this._options && this._options.mode && this._options.mode.toLowerCase() === 'single' ? 'single' : 'multiple';
     }
 
+    get mediaType(): string {
+        return this._options && this._options.mediaType && this._options.mediaType === 1 ? 'image' : 'video';
+    }
+
     authorize(): Promise<void> {
         if ((<any>android).os.Build.VERSION.SDK_INT >= 23) {
             return permissions.requestPermission([(<any>android).Manifest.permission.READ_EXTERNAL_STORAGE]);
@@ -158,14 +174,14 @@ export class ImagePicker {
                                     if (clipItem) {
                                         let uri = clipItem.getUri();
                                         if (uri) {
-                                            let selectedAsset = new imageAssetModule.ImageAsset(UriHelper._calculateFileUri(uri));
+                                            let selectedAsset = new SelectedAsset(UriHelper._calculateFileUri(uri));
                                             results.push(selectedAsset);
                                         }
                                     }
                                 }
                             } else {
                                 let uri = data.getData();
-                                let selectedAsset = new imageAssetModule.ImageAsset(UriHelper._calculateFileUri(uri));
+                                let selectedAsset = new SelectedAsset(UriHelper._calculateFileUri(uri));
                                 results.push(selectedAsset);
                             }
 
@@ -189,7 +205,13 @@ export class ImagePicker {
 
             let Intent = android.content.Intent;
             let intent = new Intent();
-            intent.setType("image/*");
+            //intent.setType("image/*");
+
+            if (this.mediaType === 'video') {
+                intent.setType("video/*");
+            } else {
+                intent.setType("image/*");
+            }
 
             // TODO: Use (<any>android).content.Intent.EXTRA_ALLOW_MULTIPLE
             if (this.mode === 'multiple') {
